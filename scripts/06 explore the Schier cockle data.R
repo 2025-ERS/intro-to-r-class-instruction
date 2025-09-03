@@ -23,7 +23,7 @@ library(tidyverse) # load the tidyverse package
 
 #--------------------------03 Read and combine the data -----
 # load the elevation data and show the first 10 records of the dataset
-elevdat<-read_csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vT4C7olgh28MHskOjCIQGYlY8v5z1sxza9XaCccwITnjoafF_1Ntfyl1g7ngQt4slnQlseWT6Fk3naB/pub?gid=1550309563&single=true&output=csv")
+elevdat<-readr::read_csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vT4C7olgh28MHskOjCIQGYlY8v5z1sxza9XaCccwITnjoafF_1Ntfyl1g7ngQt4slnQlseWT6Fk3naB/pub?gid=1550309563&single=true&output=csv")
 elevdat
 
 # plot the change in transect  elevation along the transect, using a separate graph for each for each year 
