@@ -11,7 +11,6 @@ suppressPackageStartupMessages({
   library(purrr)
   library(tidyverse)
   library(patchwork)
-  library(scales)
   library(httpuv)
 })
 
