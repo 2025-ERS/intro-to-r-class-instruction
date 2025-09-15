@@ -1,5 +1,5 @@
 # --------------------------HEADER ----------------
-# title: "08_linear_models.R"
+# title: "09_linear_models.R"
 # author: "Han Olff"
 # date: "2025-9-13"
 # description: "Introduction to linear models - single and multiple linear regression"
@@ -9,7 +9,7 @@
 
 #--------------------------01 Set up the environment ----
 source("scripts/00-setup.R")
-gsheets_auth()
+
 
 #--------------------------02 Read and combine the datasets -----
 #### 02.1) macrotransect database
