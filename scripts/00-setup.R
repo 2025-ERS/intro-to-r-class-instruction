@@ -5,7 +5,7 @@ library(renv) # load renv library
 renv::restore() # restore the packages in the renv.lock file
 
 #---------------------------02 Load required libraries -----------------------------
-library(googlesheets4)
+  library(googlesheets4)
 suppressPackageStartupMessages({
   library(dplyr)
   library(purrr)
