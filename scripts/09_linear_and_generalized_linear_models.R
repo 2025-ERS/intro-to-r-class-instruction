@@ -9,7 +9,7 @@
 
 #--------------------------01 Set up the environment ----
 source("scripts/00-setup.R")
-
+gsheets_auth()
 
 #--------------------------02 Read and combine the datasets -----
 #### 02.1) macrotransect database
@@ -17,6 +17,7 @@ source("scripts/00-setup.R")
 # use the gid link to the database, so not the csv link to one of its tables!
 MacrotransectDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1UmpZoNIjo5lXdcpGKuBHe7wFX1Z3AQioeHjzrFgYnxo")  
 # show the tables in the database
+MacrotransectDB
 MacrotransectDB$MetTables
 # show the variables used in the table FactElevation
 MacrotransectDB$MetVariables |> dplyr::filter(Table_ID=="FactElevation")  
@@ -47,7 +48,8 @@ MacrodetritivoresDB$Orchestia <- MacrodetritivoresDB$FactSpeciesCount |>
 MacrodetritivoresDB$Orchestia
 
 # merge the elevation data since 2017 with the Orchestia data, adding zero observations
-MacrodetritivoresDB$OrchestiaElev<-dplyr::left_join(MacrotransectDB$FactElevation |> dplyr::filter(Year %in% c(2017:2019,2021,2023:2025)),
+MacrodetritivoresDB$OrchestiaElev<-dplyr::left_join(MacrotransectDB$FactElevation |> 
+                                                  dplyr::filter(Year %in% c(2017:2019,2021,2023:2025)),
                                                     MacrodetritivoresDB$Orchestia,
                                                     by=c("Year","TransectPoint_ID")) |>
   # replace NA in Orchestia by zero
@@ -70,16 +72,36 @@ SchierTidesDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1DOzvscotzWXm5M
                          sheets=c("MetTables", "MetVariables", "FactTransProb"))  
 SchierTidesDB$MetTables
 SchierTidesDB$MetVariables
+SchierTidesDB$FactTransProb
 
 #--------------------------03 explore the  data -------------------------------
 #  how the transgression probability changes with elevation
+p1<-SchierTidesDB$FactTransProb |> dplyr::filter(Year>=2017) |>
+  ggplot(aes(x=Sealevel_m, y=TransProb,color=factor(Year))) +
+  geom_line(linewidth=1.2) +
+  xlim(1,2) + ylim(0,0.2) +
+  ylab("transgression probability 1 apr - 30 aug")
+p1
 
 # how  sea level has changed since 1990 (expressed as transgression probability of 3 elevations)
-
+p2<-SchierTidesDB$FactTransProb |> dplyr::filter(Sealevel_m %in% c(-1,0,1), Year>=1990) |>
+  ggplot(aes(x=Year,y=TransProb, color=factor(Sealevel_m))) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  ylab("transgression probability 1 mar - 30 aug")
+p2
 # plot Orchestia (y) versus elevation_m (x) in ggplot as a scatterplot, with each year as a different color
-
+p3<- MacrodetritivoresDB$OrchestiaElev|>
+  ggplot(aes(x=Elevation_m,y=Orchestia_n,color=Year)) +
+  geom_point(size=3) +
+  geom_smooth(method="lm",
+              formula="y~x+I(x^2)",
+              fill=NA) +
+  xlim(1,2)
+p3
 
 # add the two plots p1 and p3 above eachother in a panel, using the patchwork library
+p1 / p3
 
 # calculate the optimal preferred elevation by Orchestia for each year as the weighted average elevation (using weighted.mean function)
 # store the result in the graphical object p1
