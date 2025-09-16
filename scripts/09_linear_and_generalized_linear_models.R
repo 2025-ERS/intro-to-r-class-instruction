@@ -1,5 +1,5 @@
 # --------------------------HEADER ----------------
-# title: "08_linear_models.R"
+# title: "09_linear_models.R"
 # author: "Han Olff"
 # date: "2025-9-13"
 # description: "Introduction to linear models - single and multiple linear regression"
@@ -17,6 +17,7 @@ gsheets_auth()
 # use the gid link to the database, so not the csv link to one of its tables!
 MacrotransectDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1UmpZoNIjo5lXdcpGKuBHe7wFX1Z3AQioeHjzrFgYnxo")  
 # show the tables in the database
+MacrotransectDB
 MacrotransectDB$MetTables
 # show the variables used in the table FactElevation
 MacrotransectDB$MetVariables |> dplyr::filter(Table_ID=="FactElevation")  
@@ -47,7 +48,8 @@ MacrodetritivoresDB$Orchestia <- MacrodetritivoresDB$FactSpeciesCount |>
 MacrodetritivoresDB$Orchestia
 
 # merge the elevation data since 2017 with the Orchestia data, adding zero observations
-MacrodetritivoresDB$OrchestiaElev<-dplyr::left_join(MacrotransectDB$FactElevation |> dplyr::filter(Year %in% c(2017:2019,2021,2023:2025)),
+MacrodetritivoresDB$OrchestiaElev<-dplyr::left_join(MacrotransectDB$FactElevation |> 
+                                                  dplyr::filter(Year %in% c(2017:2019,2021,2023:2025)),
                                                     MacrodetritivoresDB$Orchestia,
                                                     by=c("Year","TransectPoint_ID")) |>
   # replace NA in Orchestia by zero
@@ -70,19 +72,44 @@ SchierTidesDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1DOzvscotzWXm5M
                          sheets=c("MetTables", "MetVariables", "FactTransProb"))  
 SchierTidesDB$MetTables
 SchierTidesDB$MetVariables
+SchierTidesDB$FactTransProb
 
 #--------------------------03 explore the  data -------------------------------
 #  how the transgression probability changes with elevation
+p1<-SchierTidesDB$FactTransProb |> dplyr::filter(Year>=2017) |>
+  ggplot(aes(x=Sealevel_m, y=TransProb,color=factor(Year))) +
+  geom_line(linewidth=1.2) +
+  xlim(1,2) + ylim(0,0.2) +
+  ylab("transgression probability 1 apr - 30 aug")
+p1
 
 # how  sea level has changed since 1990 (expressed as transgression probability of 3 elevations)
-
+p2<-SchierTidesDB$FactTransProb |> dplyr::filter(Sealevel_m %in% c(-1,0,1), Year>=1990) |>
+  ggplot(aes(x=Year,y=TransProb, color=factor(Sealevel_m))) +
+  geom_point() +
+  geom_smooth(method="lm") +
+  ylab("transgression probability 1 mar - 30 aug")
+p2
 # plot Orchestia (y) versus elevation_m (x) in ggplot as a scatterplot, with each year as a different color
-
+p3<- MacrodetritivoresDB$OrchestiaElev|>
+  ggplot(aes(x=Elevation_m,y=Orchestia_n,color=Year)) +
+  geom_point(size=3) +
+  geom_smooth(method="lm",
+              formula="y~x+I(x^2)",
+              fill=NA) +
+  xlim(1,2)
+p3
 
 # add the two plots p1 and p3 above eachother in a panel, using the patchwork library
+p1 / p3
 
 # calculate the optimal preferred elevation by Orchestia for each year as the weighted average elevation (using weighted.mean function)
-# store the result in the graphical object p1
+MacrodetritivoresDB$OrchestiaElev2<-MacrodetritivoresDB$OrchestiaElev |>
+  group_by(Year) |>
+  summarize(OptimalElev_m=weighted.mean(x=Elevation_m,Orchestia_n,na.rm=T),
+            AvgAbund=mean(Orchestia_n,na.rm=T)
+           )
+MacrodetritivoresDB$OrchestiaElev2
 
 
 ## explore response to elevation and year as a linear model, call this m1
@@ -99,14 +126,50 @@ SchierTidesDB$MetVariables
 # although this is also shown by significance of the quadratic term in summary(m2)
 anova(m1,m2)
 
+###### Explore the assumptions of a linear regression
+# database: microtransectDB
+# browseURL("https://docs.google.com/spreadsheets/d/1dJkH09imko9RgOkGzYQT74IeGY56QwiXjjBl7u0KcK0/")
+MicrotransectDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1dJkH09imko9RgOkGzYQT74IeGY56QwiXjjBl7u0KcK0/")
+MicrotransectDB$MetTables
+MicrotransectDB$FactVegClay
 
+# plot how clay responds to elevation
+MicrotransectDB$FactVegClay |> dplyr::filter(year==2025) |>
+  ggplot(aes(x=elevation_m,y=claydepth_cm)) +
+  geom_point() +
+  geom_smooth(method="lm")
+
+# fit a linear model
+m1<-MicrotransectDB$FactVegClay |> dplyr::filter(year==2025) |>
+  lm(claydepth_cm~elevation_m, data=_)
+summary(m1)
+
+# explore the residuals
+library(broom)
+m1 |> broom::augment() |>
+  ggplot(aes(x=.resid)) +
+  geom_histogram(bins=15)
+# assumption: this is a normal distribution with mean zero
+
+# check for normality
+m1 |> broom::augment() |>
+  ggplot(aes(sample=.std.resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  labs(x="theoretical quantile", y="standardized residuals",
+       title="Normal Q-Q plot of standardize residuals")
+  
 
 # explore the consequences of a log transformation of y values
 x<-c(0,1,2,3,4,5)
-y<-c(1,10,100,1000,10000,100000)
+y<-c(1,15,80,1200,7000,18000)
 dat<-data.frame(x,y)
 dat
-
+dat |> ggplot(aes(x=x,y=log10(y))) +
+  geom_point(size=5) +
+  geom_smooth(method="lm")
+z<-c(1,10,100,1000)
+log10(z)
 
 
 ### develop, test for significance and plot different models of increasing complexity using a glm approach
@@ -114,33 +177,130 @@ dat
 # Explore  how the abundance of Orchestia depends on elevation_m and year,  their potential interaction,
 # and a potential ecological optimum of Orchestia with respect to elevation_m
 # show the effect of elevation but now in a generalized linear model instead of linear model, using a log link function and a poisson distribution
-x<-MacrodetritivoresDB$OrchestiaElev$Elevation_m
-y<-MacrodetritivoresDB$OrchestiaElev$Orchestia_n
-names(dat)
+library(glmmTMB)
+# show the families of models in this package
+# https://glmmtmb.github.io/glmmTMB/reference/nbinom2.html
+
+m5<-MacrodetritivoresDB$OrchestiaElev |>
+  glmmTMB::glmmTMB(Orchestia_n~Elevation_m,
+                   family=poisson(link="log"),
+                   data=_)
+drop1(m5,test="Chisq")
+
+m6<-MacrodetritivoresDB$OrchestiaElev |>
+  glmmTMB::glmmTMB(Orchestia_n~Elevation_m + I(Elevation_m^2),
+                   family=poisson(link="log"),
+                   data=_)
+drop1(m6,test="Chisq")
+# at least 2 units in AIC lower, means a better model
+AIC(m6,m5)
+# asusmption of poisson distribut: mean of residuals = variance of resid (the dispersion)
+# Plot the observations and predicted value
+mm<-m6
+df_fit<-model.frame(mm)
+newdat <- expand.grid(
+  Elevation_m=seq(min(df_fit$Elevation_m,na.rm=T),
+                  max(df_fit$Elevation_m,na.rm=T),
+                  length.out=200)) 
+newdat2<-newdat |>
+   mutate(.fitted=predict(mm,newdata=newdat,type="response"))
+ggplot(df_fit,aes(x=Elevation_m,y=Orchestia_n)) +
+  geom_point() +
+  geom_line(data=newdat2,aes(y=.fitted),linewidth=2)
+library(DHARMa)
+mm_res<-DHARMa::simulateResiduals(mm,n=1000)
+DHARMa::testDispersion(mm_res) # should be not significant
+DHARMa::testZeroInflation(mm_res) # test zero inflation
+DHARMa::testOutliers(mm_res) # test outliers
+
+#### add year in the model
+m7<-MacrodetritivoresDB$OrchestiaElev |>
+  glmmTMB::glmmTMB(Orchestia_n~Elevation_m + I(Elevation_m^2)+Year+Elevation_m:Year,
+                   family=poisson(link="log"),
+                   data=_)
+drop1(m7,test="Chisq")
+# at least 2 units in AIC lower, means a better model
+AIC(m7,m6)
+# asusmption of poisson distribut: mean of residuals = variance of resid (the dispersion)
+# Plot the observations and predicted value
+mm<-m7
+df_fit<-model.frame(mm)
+newdat <- expand.grid(
+  Year=unique(df_fit$Year),
+  Elevation_m=seq(min(df_fit$Elevation_m,na.rm=T),
+                  max(df_fit$Elevation_m,na.rm=T),
+                  length.out=200)) 
+newdat2<-newdat |>
+  mutate(.fitted=predict(mm,newdata=newdat,type="response"))
+ggplot(df_fit,aes(x=Elevation_m,y=Orchestia_n,color=factor(Year))) +
+  geom_point() +
+  geom_line(data=newdat2,aes(y=.fitted),linewidth=1.2)
+library(DHARMa)
+mm_res<-DHARMa::simulateResiduals(mm,n=1000)
+DHARMa::testDispersion(mm_res) # should be not significant
+DHARMa::testZeroInflation(mm_res) # test zero inflation
+DHARMa::testOutliers(mm_res) # test outliers
+
+m7<-MacrodetritivoresDB$OrchestiaElev |>
+  glmmTMB::glmmTMB(Orchestia_n~Elevation_m + I(Elevation_m^2)+Year+Elevation_m:Year,
+                   family=poisson(link="log"),
+                   data=_)
+drop1(m7,test="Chisq")
+# at least 2 units in AIC lower, means a better model
+AIC(m7,m6)
+# asusmption of poisson distribut: mean of residuals = variance of resid (the dispersion)
 
 
-anova(m5,test="Chisq")
-#add the linear model to the plot
-# calculate the predicted value of m2 for every observation, add to the dataset as a variable as pred2
-# add the new predicted line to the previous plot p2, store as object p3 and show it
+# shift from poisson distribution to negative binomial 2
+# assume variance of the residuals increases quadratically w the mean
+m8<-MacrodetritivoresDB$OrchestiaElev |>
+  glmmTMB::glmmTMB(Orchestia_n~Elevation_m + I(Elevation_m^2)+Year+Elevation_m:Year,
+                   family=nbinom2(link="log"),
+                   data=_)
+drop1(m8,test="Chisq")
+mm<-m8
+df_fit<-model.frame(mm)
+newdat <- expand.grid(
+  Year=unique(df_fit$Year),
+  Elevation_m=seq(min(df_fit$Elevation_m,na.rm=T),
+                  max(df_fit$Elevation_m,na.rm=T),
+                  length.out=200)) 
+newdat2<-newdat |>
+  mutate(.fitted=predict(mm,newdata=newdat,type="response"))
+ggplot(df_fit,aes(x=Elevation_m,y=Orchestia_n,color=factor(Year))) +
+  geom_point() +
+  geom_line(data=newdat2,aes(y=.fitted),linewidth=1.2)
+library(DHARMa)
+mm_res<-DHARMa::simulateResiduals(mm,n=1000)
+DHARMa::testDispersion(mm_res) # should be not significant
+DHARMa::testZeroInflation(mm_res) # test zero inflation
+DHARMa::testOutliers(mm_res) # test outliers
 
+# shift from poisson distribution to negative binomial 2
+# plus accounting for overdispersion (more zeros than expect)
+# assume variance of the residuals increases quadratically w the mean
+m9<-MacrodetritivoresDB$OrchestiaElev |>
+  glmmTMB::glmmTMB(Orchestia_n~Elevation_m + I(Elevation_m^2)
+                   +Year+Elevation_m:Year,
+                   family=nbinom2(link="log"),
+                   ziformula= ~ 1,
+                   data=_)
+drop1(m9,test="Chisq")
+mm<-m9
+df_fit<-model.frame(mm)
+newdat <- expand.grid(
+  Year=unique(df_fit$Year),
+  Elevation_m=seq(min(df_fit$Elevation_m,na.rm=T),
+                  max(df_fit$Elevation_m,na.rm=T),
+                  length.out=200)) 
+newdat2<-newdat |>
+  mutate(.fitted=predict(mm,newdata=newdat,type="response"))
+ggplot(df_fit,aes(x=Elevation_m,y=Orchestia_n,color=factor(Year))) +
+  geom_point() +
+  geom_line(data=newdat2,aes(y=.fitted),linewidth=1.2)
+library(DHARMa)
+mm_res<-DHARMa::simulateResiduals(mm,n=1000)
+DHARMa::testDispersion(mm_res) # should be not significant
+DHARMa::testZeroInflation(mm_res) # test zero inflation
+DHARMa::testOutliers(mm_res) # test outliers
 
-
-# now test and show  the effect of both elevation , elevation squared and year
-
-
-#add the linear model to the plot
-# calculate the predicted value of m2 for every observation, add to the dataset as a variable as pred2
-# add the new predicted line to the previous plot p2, store as object p3 and show it
-
-
-# better than the previous?
-
-
-# add the interaction to the model: elevation + elevation ^2 + year + elevation*year
-# now test and show  the effect of both elevation + year
-
-
-#add the  model to the plot
-# calculate the predicted value of m2 for every observation, add to the dataset as a variable as pred2
-# add the new predicted line to the previous plot p2, store as object p3 and show it

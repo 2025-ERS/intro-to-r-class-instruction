@@ -5,7 +5,7 @@ library(renv) # load renv library
 renv::restore() # restore the packages in the renv.lock file
 
 #---------------------------02 Load required libraries -----------------------------
-library(googlesheets4)
+  library(googlesheets4)
 suppressPackageStartupMessages({
   library(dplyr)
   library(purrr)
@@ -16,20 +16,20 @@ suppressPackageStartupMessages({
 
 #---------------------------03 Define user functions -------------------------------
 
-#### 1) Function read_gsheetsDB to read specific sheets from a gsheets database or the whole database
+#### 1) Function read_gsdb to read specific sheets from a gsheets database or the whole database
 # 
 # Usage examples: 
 #
 # 1 - Read all sheets in a database, no filter, all sheets are put in a list object (default)
 # database_link <- "https://docs.google.com/spreadsheets/d/<SHEET_ID>"
-# database <- read_gsheetDB(database_link)
+# database <- read_gsdb(database_link)
 # names(database)
 # 
 # 2- Read two specific sheets:
-# subset <- read_gsheetsDB(database, sheets = c("Species", "Transects"))
+# subset <- read_gsdb(database, sheets = c("Species", "Transects"))
 # 
 # 3 - Read three specific sheets, with a specific filter for each sheet
-# filtered <- read_sheets(database_link,sheets = c("Species", "Transects", "Observations"),
+# filtered <- read_gsdb(database_link,sheets = c("Species", "Transects", "Observations"),
 #    filter = list(
 #                  Species      = ~ !is.na(Species_ID),
 #                  Transects    = ~ Region == "Loita",
