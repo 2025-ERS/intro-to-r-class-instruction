@@ -104,7 +104,12 @@ p3
 p1 / p3
 
 # calculate the optimal preferred elevation by Orchestia for each year as the weighted average elevation (using weighted.mean function)
-# store the result in the graphical object p1
+MacrodetritivoresDB$OrchestiaElev2<-MacrodetritivoresDB$OrchestiaElev |>
+  group_by(Year) |>
+  summarize(OptimalElev_m=weighted.mean(x=Elevation_m,Orchestia_n,na.rm=T),
+            AvgAbund=mean(Orchestia_n,na.rm=T)
+           )
+MacrodetritivoresDB$OrchestiaElev2
 
 
 ## explore response to elevation and year as a linear model, call this m1
@@ -121,11 +126,43 @@ p1 / p3
 # although this is also shown by significance of the quadratic term in summary(m2)
 anova(m1,m2)
 
+###### Explore the assumptions of a linear regression
+# database: microtransectDB
+# browseURL("https://docs.google.com/spreadsheets/d/1dJkH09imko9RgOkGzYQT74IeGY56QwiXjjBl7u0KcK0/")
+MicrotransectDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1dJkH09imko9RgOkGzYQT74IeGY56QwiXjjBl7u0KcK0/")
+MicrotransectDB$MetTables
+MicrotransectDB$FactVegClay
 
+# plot how clay responds to elevation
+MicrotransectDB$FactVegClay |> dplyr::filter(year==2025) |>
+  ggplot(aes(x=elevation_m,y=claydepth_cm)) +
+  geom_point() +
+  geom_smooth(method="lm")
+
+# fit a linear model
+m1<-MicrotransectDB$FactVegClay |> dplyr::filter(year==2025) |>
+  lm(claydepth_cm~elevation_m, data=_)
+summary(m1)
+
+# explore the residuals
+library(broom)
+m1 |> broom::augment() |>
+  ggplot(aes(x=.resid)) +
+  geom_histogram(bins=15)
+# assumption: this is a normal distribution with mean zero
+
+# check for normality
+m1 |> broom::augment() |>
+  ggplot(aes(sample=.std.resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  labs(x="theoretical quantile", y="standardized residuals",
+       title="Normal Q-Q plot of standardize residuals")
+  
 
 # explore the consequences of a log transformation of y values
 x<-c(0,1,2,3,4,5)
-y<-c(1,10,100,1000,10000,100000)
+y<-c(1,15,80,1200,7000,18000)
 dat<-data.frame(x,y)
 dat
 
