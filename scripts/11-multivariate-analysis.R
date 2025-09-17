@@ -1,0 +1,228 @@
+# --------------------------HEADER ----------------
+# title: 11-multivariate-analysis.R
+# author: Han Olff
+# date: 2025-9-16
+# description: Multivariate analysis: DCA, CCA, PCA
+# input databases: VegetationDB plus other databases with environmental data
+
+#--------------------------01 Set up the environment ----
+source("scripts/00-setup.R")
+gsheets_auth()
+library(vegan)
+library(psych)
+
+#--------------------------02 Read and combine the datasets -----
+
+# 1) read and filter the vegetation data for 2025
+# browseURL("https://docs.google.com/spreadsheets/d/1WIzkUvunLk1buybZ04Oko8wnF65EbuXjWEviWbeAwu4")
+VegetationDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1WIzkUvunLk1buybZ04Oko8wnF65EbuXjWEviWbeAwu4",
+                        sheet="FactVegCov")
+VegetationDB$FactVegCov2025<-VegetationDB$FactVegCov |>
+  # filter for only the only 2023 data and plots with vegetation
+  filter(Year==2025 & TransectPoint_ID<=1150) |>     
+  # select  only distance_m and the species names as variable to use
+  dplyr::select(-c(Year,Bare,Litter,Mosses,SalicSpp)) |>
+  # convert distance_m to the row names of the tibble (required by vegan)
+  tibble::column_to_rownames(var="TransectPoint_ID") %>%  
+  # %>% needed because of  . representing the input data in next line
+  # remove species not found anywhere in this year
+  dplyr::select(which(colSums(.) != 0))  
+VegetationDB$FactVegCov2025 |> as_tibble()
+
+
+# 2) read and filter the macrotransect elevation data for 2025
+MacrotransectDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1UmpZoNIjo5lXdcpGKuBHe7wFX1Z3AQioeHjzrFgYnxo",
+                           sheet="FactElevation")
+MacrotransectDB$FactElevation2025 <- MacrotransectDB$FactElevation |>
+  dplyr::filter(Year==2025 & !is.na(TransectPoint_ID) & TransectPoint_ID<=1150) |>
+  dplyr::select(TransectPoint_ID,Elevation_m) |>   # select  only distance_m and elevation 
+  dplyr::mutate(Elevation_m=round(Elevation_m,2))
+view(MacrotransectDB$FactElevation2025)
+
+# 3) read the transgression probability (proportion of the time of  the growing season flooded) of different elevations (per cm)
+# from 1 april - 30 aug
+SchierTideDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1DOzvscotzWXm5MmEFrZhvPY820weEZVcSfUYz_5Gyf4",
+                        sheets="FactTransProb") 
+SchierTideDB$FactTransProb2025<-SchierTideDB$FactTransProb |>
+  dplyr::filter(Year==2025) |>
+  dplyr::select(Elevation_m,TransProb)
+view(SchierTideDB$FactTransProb2025)
+
+
+# 4) read the clay thickness and redox potential from the soil  database
+SoilDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1oHYCBlLR47Pxov5iF8PS_71lIRJwxgUfAP_t8JumJ7o",
+                  sheet=c("FactProfile","FactRedox"))
+SoilDB$FactProfile2025<-SoilDB$FactProfile |>
+  dplyr::filter(Year==2025 & SoilType_ID %in% c("clay","clay-organic") & TransectPoint_ID<=1150) |>
+  dplyr::select(TransectPoint_ID,corrected_depth) |>     
+  group_by(TransectPoint_ID) |> 
+  dplyr::summarize(Clay_cm=mean(corrected_depth,na.rm=T)) #calculate average clay layer thickness  for each pole
+SoilDB$FactProfile2025
+
+SoilDB$FactRedox2025<-SoilDB$FactRedox |>
+  dplyr::filter(Year==2025,TransectPoint_ID<=1150) |>
+  dplyr::group_by(TransectPoint_ID,ProbeDepth) |>
+  dplyr::summarize(redox_mV=mean(redox_raw2_mV,na.rm=T)) |>
+  tidyr::pivot_wider(id_cols=TransectPoint_ID,
+                     names_from=ProbeDepth,
+                     names_prefix = "Redox",
+                     values_from = redox_mV)
+SoilDB$FactRedox2025
+
+
+
+
+##### Merge all previous 2025 datafiles into a single file EnvDat
+# a sequential join operation in a pipe
+# set distance_m as the row names of the  tibble
+# set the NAs for floodprop equal to zero
+# set the NAs for clay thickness equal to zero
+# round floodprob to 2 decimals
+
+EnvDat <- 
+  MacrotransectDB$FactElevation2025 |>
+  dplyr::left_join(SchierTideDB$FactTransProb2025, by="Elevation_m") |>
+  dplyr::left_join(SoilDB$FactProfile2025, by="TransectPoint_ID") |>
+  dplyr::left_join(SoilDB$FactRedox2025, by="TransectPoint_ID") |>
+  dplyr::mutate(TransProb=ifelse(is.na(TransProb),0,TransProb),
+                TransProb=round(TransProb,3),
+                Clay_cm=ifelse(is.na(Clay_cm),0,Clay_cm)) |>
+  # convert to dataframe with row names required by vegan
+  tibble::column_to_rownames(var="TransectPoint_ID")  
+print(EnvDat)  
+
+# so for ordination with functions from the vegan library you need an separate environmental factors dataset
+# and a species composition dataset with the same rownames, indicating  the same sites / samples
+# the species data (community composition) need to be in wide format, so we produced this
+vegdat<-VegetationDB$FactVegCov2025
+envdat<-EnvDat
+
+##### explore the correlations among the environmental factors in a panel pairs plot
+# using the pearson correlation coefficient
+
+
+
+# using the spearman rank-correlation coefficient
+
+
+# note that the levels of significance are very different! 
+
+##### Ordination: run a Principal Component Analysis (PCA) on the environmental data
+# .scale=T means: use correlations instead of covariances
+# use .scale=T for datasets where the variables are measured in different units
+
+# do a principal component analysis (pca) 
+
+
+# show the site scores for axis 1
+
+
+# the PCs are reduced dimensions of the dataset
+# you reduce 6 variables to 2 dimensions
+# make a biplot (variable scores plus sample score) the pca ordination
+# and label the axis with the explained variation
+
+
+##### ordination: calculate and plot a Non-metric Multidimensional Scaling (NMDS) ordination
+# explore the distance (dissimilarity) in species composition between plots
+
+
+# non-metric multidimension scaling / indirect gradient analysis (only species composition)
+
+
+# and show the ordination with the most abundance species with priority
+
+
+#### ordination: compare to a DCA -> decide what ordination we should do, linear or unimodal? 
+# how long are the gradients? Should I use linear (PCA)or unimodal method (NMDS, DCA)
+
+
+# first axis is ~10 standard deviations of species responses
+# result: length of first ordination axis is >8 standard deviations
+# only when <1.5 you can use a PCA or RDA
+# plot the dca results as a biplot
+
+
+##### fit the environmental factors to the dca ordination surface
+
+
+#add the result to the ordination plot as vectors for each variable
+
+
+##### add contour surfaces to the dca ordination for the relevant abiotic variables
+
+# make the plot again with contours of abundance of Plantago maritima
+
+##### make the same plot but using a nmds
+##### fit the environmental factors to the nmds ordination surface
+
+
+##### fit the environmental factors to the dca ordination surface
+
+
+#add the result to the ordination plot as vectors for each variable
+
+
+##### add contour surfaces to the nmds ordination for the relevant abiotic variables
+
+
+##### compare an unconstrainted (DCA) and constrained (CCA) ordination
+# did you miss important environmental factors?
+# show the results of the detrended correspondence analysis
+
+
+# the eigenvalues represent the variation explained by each axis
+
+
+# Test the whole model
+
+
+# Test axes
+
+# Test terms (environmental variables)
+
+# kick out variables that are not significant - simplify the model
+
+
+# Test the whole model
+
+
+# Test axes
+
+
+# Test terms (environmental variables)
+
+
+# add the environmental factors to the cca ordination plot
+
+
+
+# You have measured the right things that matter for the vegetation composition!
+
+##### --------------------cluster analysis (classification) of  communities
+# first calculate a dissimilarity matrix, using Bray-Curtis dissimilarity
+
+# show the dissimilarity matrix (1= completely different, 0= exactly the same)
+
+# now cluster the sites based on similarity in species composition 
+# using average linkage as the sorting algorithm
+
+
+# back to  clustering based on species composition - show the dendrogram and cut it in 4 communities
+
+
+
+##### add the clustering of plots to your cca ordination
+
+
+#add the vegetation type to the environmental data
+envdat2<-envdat %>%
+  dplyr::mutate(vegtype=factor(c4))
+envdat2
+envdat2$vegtype
+levels(envdat2$vegtype)<-c("Dune","High saltmarsh", "Low saltmarsh","Pioneer zone")
+
+
+# show the differences in environmental factors among the plant communities 
+# groups of sites with different vegetation composition
+
