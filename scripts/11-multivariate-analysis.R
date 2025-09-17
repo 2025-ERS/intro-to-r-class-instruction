@@ -37,7 +37,7 @@ MacrotransectDB$FactElevation2025 <- MacrotransectDB$FactElevation |>
   dplyr::filter(Year==2025 & !is.na(TransectPoint_ID) & TransectPoint_ID<=1150) |>
   dplyr::select(TransectPoint_ID,Elevation_m) |>   # select  only distance_m and elevation 
   dplyr::mutate(Elevation_m=round(Elevation_m,2))
-view(MacrotransectDB$FactElevation2025)
+MacrotransectDB$FactElevation2025
 
 # 3) read the transgression probability (proportion of the time of  the growing season flooded) of different elevations (per cm)
 # from 1 april - 30 aug
@@ -46,7 +46,7 @@ SchierTideDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1DOzvscotzWXm5Mm
 SchierTideDB$FactTransProb2025<-SchierTideDB$FactTransProb |>
   dplyr::filter(Year==2025) |>
   dplyr::select(Elevation_m,TransProb)
-view(SchierTideDB$FactTransProb2025)
+SchierTideDB$FactTransProb2025
 
 
 # 4) read the clay thickness and redox potential from the soil  database
