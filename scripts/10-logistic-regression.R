@@ -15,14 +15,23 @@ library(DHARMa)
 # read the microtransect data, noting that the data are in wide format
 # database: microtransectDB
 # browseURL("https://docs.google.com/spreadsheets/d/1dJkH09imko9RgOkGzYQT74IeGY56QwiXjjBl7u0KcK0/")
+MicrotransectDB<-read_gsdb("https://docs.google.com/spreadsheets/d/1dJkH09imko9RgOkGzYQT74IeGY56QwiXjjBl7u0KcK0/")
 
 # show the variable names of the table FactVegClay
-
+names(MicrotransectDB$FactVegClay)
 
 
 # in MicrotransectDB$FactVegClay, the presence per species is stored in wide format, convert to long format with Species as a variable
 # keeping only the 2025 data, define the new variables Species (name) and Present (0,1)
-MicrotransectDB$FactVegClay<-
+# sort the dataframe for year, species and Point_ID
+# filter it for year 2025 and exclude species Salicornia.sp
+MicrotransectDB$FactVegClay2025<- MicrotransectDB$FactVegClay |>
+  tidyr::pivot_longer(cols = -c(Point_ID:ClayDepth_cm),  # what to keep
+                      names_to="Species",
+                      values_to = "Present") |>
+  dplyr::arrange(Year,Species,Point_ID) |>
+  dplyr::filter(Year==2025 & Species!="Salicornia.sp")
+MicrotransectDB$FactVegClay2025
 
 # calculate in addition to the clay layer also a sand layer depth
 MicrotransectDB$Soil2025<-MicrotransectDB$FactVegClay |>
@@ -60,30 +69,77 @@ p2<-ggplot(data=MicrotransectDB$PlantPres,aes(x=Point_ID,y=max(SpeciesNum)-Speci
 p2
 
 # put the two graphs in one panel figure (vertical above eachother)
-
+p1 / p2
 
 # calculate the frequency (as a proportion) of occurrence of each species 
-# in 2023, and sort according to frequency
-
+# in 2025, and sort according to decreasing frequency
+SpeciesFreq2025<-MicrotransectDB$FactVegClay2025 %>%
+  dplyr::group_by(Species) %>%
+  dplyr::summarise(Freq=mean(Present)) %>%
+  dplyr::arrange(desc(Freq))
+SpeciesFreq2025
 
 DomSpec <- c("Puccinellia.maritima","Salicornia.europaea","Limonium.vulgare",
              "Plantago.maritima","Glaux.maritima","Salicornia.procumbens")
+DomSpec
 
+# fit a logistic regression model for Glaux.maritima
+m.Glaux1<-MicrotransectDB$FactVegClay2025 |>
+  dplyr::filter(Species=="Glaux.maritima") |>
+  glmmTMB::glmmTMB(Present~Elevation_m,
+                   family = binomial(link="logit"),
+                   data=_)
+summary(m.Glaux)
 
-# fit a logistic regression model for Limonium vulgare
+m.Glaux2<-MicrotransectDB$FactVegClay2025 |>
+  dplyr::filter(Species=="Glaux.maritima") |>
+  glmmTMB::glmmTMB(Present~Elevation_m + I(Elevation_m^2),
+                   family = binomial(link="logit"),
+                   data=_)
+summary(m.Glaux2)
+
 
 # define a set of helper functions
 #----------------------------------------Helpers --------------------------------------
 # 1) function to fit a logistic regression logit(Present)~Elevation_m
-
+fit1<- function(species_name, db=MicrotransectDB$FactVegClay2025) {
+  db |>
+  dplyr::filter(Species==species_name) |>
+  glmmTMB::glmmTMB(Present~Elevation_m,
+                   family = binomial(link="logit"),
+                   data=_)
+}
 
 # 2) function to fit a logistic regression logit(Present)~Elevation_m+I(Elevation_m^2)
+fit2<- function(species_name, db=MicrotransectDB$FactVegClay2025) {
+  db |>
+    dplyr::filter(Species==species_name) |>
+    glmmTMB::glmmTMB(Present~Elevation_m+I(Elevation_m^2),
+                     family = binomial(link="logit"),
+                     data=_)
+}
 
 # 3) add predicted probability of occurrence for a particular species to the dataset
-
+add_predictions<- function(species_name,model,db=MicrotransectDB$FactVegClay2025) {
+  db %>%
+    dplyr::mutate(
+      Predicted = if (any(names(.) == "Predicted")) Predicted else NA_real_,
+      Predicted = if_else(
+        Species == species_name,
+        predict(model,newdata = pick(everything()), type="response"),
+        Predicted
+      )
+    )
+}
 
 #####--------------------------------Fit logistic regression models 
-
+# fit the models for Glaux.maritima
+summary(fit1("Glaux.maritima"))
+summary(fit2("Glaux.maritima"))
+# choose which model to use, and add its predictions to the dataframe
+MicrotransectDB$FactVegClay2025 <-
+   add_predictions(species_name="Glaux.maritima",model=fit1("Glaux.maritima"))
+view(MicrotransectDB$FactVegClay2025)
 # Model Puccinellia.maritima and add predicted values to the dataset
 
 
@@ -96,6 +152,19 @@ DomSpec <- c("Puccinellia.maritima","Salicornia.europaea","Limonium.vulgare",
 
 ##### -----------------------Plot the results
 # plot the 6 most frequently occurring species with present/absence in a panel plot, with predicted curve
+DomSpec 
+p4<-MicrotransectDB$FactVegClay2025 |> dplyr::filter(Species %in% DomSpec) |>
+  ggplot(aes(x = Elevation_m, y = Present)) +
+  geom_point(size = 1) +
+  geom_smooth(method="lm")+
+  labs(
+    title = "Microtransect",
+    x = "Elevation (m)",
+    y = "Presence"
+  ) +
+  ylim(-1,2) +
+  facet_wrap(~Species)
+p4
 
 
 # Plot the predicted values (without observed values) of the different species in 1 plot
