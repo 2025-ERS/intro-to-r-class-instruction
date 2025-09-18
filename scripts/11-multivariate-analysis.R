@@ -151,21 +151,27 @@ vegan::orditorp(nmds_veg,display="sp",priority=SpecTotCov,
 
 #### ordination: compare to a DCA -> decide what ordination we should do, linear or unimodal? 
 # how long are the gradients? Should I use linear (PCA)or unimodal method (NMDS, DCA)
-
+dca<-vegan::decorana(vegdat)
+dca
 
 # first axis is ~10 standard deviations of species responses
 # result: length of first ordination axis is >8 standard deviations
 # only when <1.5 you can use a PCA or RDA
 # plot the dca results as a biplot
-
+vegan::ordiplot(dca,display="sites", cex=0.7,type="text")
+vegan::orditorp(dca,dis="sp",priority = SpecTotCov,
+                col="red",pcol="red",pch = "+",cex=0.8)
 
 ##### fit the environmental factors to the dca ordination surface
-
-
+names(envdat)
+ef_dca<-vegan::envfit(dca~Clay_cm+Elevation_m+TransProb+Redox5+Redox10,
+                      data=envdat,na.rm=T)
 #add the result to the ordination plot as vectors for each variable
-
+plot(ef_dca,add=T)
 
 ##### add contour surfaces to the dca ordination for the relevant abiotic variables
+vegan::ordisurf(dca,envdat$TransProb,add=T,col="red")
+vegan::ordisurf(dca,envdat$Clay_cm,add=T,col="green")
 
 # make the plot again with contours of abundance of Plantago maritima
 
