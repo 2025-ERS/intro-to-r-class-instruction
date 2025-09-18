@@ -27,7 +27,7 @@ VegetationDB$FactVegCov2025<-VegetationDB$FactVegCov |>
   # %>% needed because of  . representing the input data in next line
   # remove species not found anywhere in this year
   dplyr::select(which(colSums(.) != 0))  
-VegetationDB$FactVegCov2025 |> as_tibble()
+VegetationDB$FactVegCov2025 
 
 
 # 2) read and filter the macrotransect elevation data for 2025
@@ -95,14 +95,16 @@ print(EnvDat)
 # and a species composition dataset with the same rownames, indicating  the same sites / samples
 # the species data (community composition) need to be in wide format, so we produced this
 vegdat<-VegetationDB$FactVegCov2025
+vegdat
 envdat<-EnvDat
+envdat
 
 ##### explore the correlations among the environmental factors in a panel pairs plot
 # using the pearson correlation coefficient
-
-
+psych::pairs.panels(envdat,smooth=F,ci=T,ellipses=F,stars=T,method='pearson')
 
 # using the spearman rank-correlation coefficient
+psych::pairs.panels(envdat,smooth=F,ci=T,ellipses=F,stars=T,method='spearman')
 
 
 # note that the levels of significance are very different! 
@@ -112,25 +114,39 @@ envdat<-EnvDat
 # use .scale=T for datasets where the variables are measured in different units
 
 # do a principal component analysis (pca) 
-
-
+pca_env<-prcomp(envdat, center=T, scale=T)
+pca_env
+summary(pca_env)
 # show the site scores for axis 1
-
+pca_env$x
 
 # the PCs are reduced dimensions of the dataset
 # you reduce 6 variables to 2 dimensions
 # make a biplot (variable scores plus sample score) the pca ordination
 # and label the axis with the explained variation
 
-
+biplot(pca_env,xlab="PC1 60%",ylab="PC2 19%")
 ##### ordination: calculate and plot a Non-metric Multidimensional Scaling (NMDS) ordination
 # explore the distance (dissimilarity) in species composition between plots
-
+vegdat
 
 # non-metric multidimension scaling / indirect gradient analysis (only species composition)
+# first show how to calculate a dissimilarity matrix
+dissimilaritymatrix1<-vegan::vegdist(vegdat,method = "euclidean") # quantitative diferences 
+dissimilaritymatrix1
+dissimilaritymatrix2<-vegan::vegdist(vegdat,method = "bray") # qualitative diferences 
+dissimilaritymatrix2
 
+nmds_veg<-vegan::metaMDS(vegdat,k=2,trace=F,trymax = 1000,distance = "bray")
+nmds_veg
+vegan::ordiplot(nmds_veg,type="t")
 
 # and show the ordination with the most abundance species with priority
+
+SpecTotCov<-colSums(vegdat)
+vegan::ordiplot(nmds_veg,display="sites",cex=1,type="t")
+vegan::orditorp(nmds_veg,display="sp",priority=SpecTotCov, 
+                col="red", pcol="red", pch="+",cex=1.1)
 
 
 #### ordination: compare to a DCA -> decide what ordination we should do, linear or unimodal? 
