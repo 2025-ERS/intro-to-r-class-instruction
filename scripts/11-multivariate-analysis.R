@@ -76,10 +76,6 @@ SoilDB$FactRedox2025<-SoilDB$FactRedox |>
                      values_from = redox_mV)
 SoilDB$FactRedox2025
 
-# 5) read the distance to gulley
-
-
-
 
 ##### Merge all previous 2025 datafiles into a single file EnvDat
 # a sequential join operation in a pipe
@@ -197,133 +193,92 @@ vegan::ordisurf(nmds_veg,envdat$TransProb,add=T,col="red")
 ##### compare an unconstrainted (DCA) and constrained (CCA) ordination
 # did you miss important environmental factors?
 # show the results of the detrended correspondence analysis
-dca
+
+
 # the eigenvalues represent the variation explained by each axis
-cca<-vegan::cca(vegdat~Clay_cm+Elevation_m+Dist2Gully_m+TransProb+Redox5+Redox10,
-                data=envdat)
-summary(cca)
+
 # Test the whole model
-anova(cca, permutations = 999)
+
+
 # Test axes
-anova(cca, by = "axis", permutations = 999)
+
+
 # Test terms (environmental variables)
-anova(cca, by = "term", permutations = 999)
+
 
 # kick out variables that are not significant - simplify the model
-cca2<-vegan::cca(vegdat~Clay_cm+Elevation_m+Dist2Gully_m+TransProb+Redox5,
-                 data=envdat)
-cca2
-scores(cca2, display = "species")
-scores(cca2, display = "sites")
-scores(cca2, display = "bp")
-summary(cca2)
+
+
 # Test the whole model
-anova(cca2, permutations = 999)
+
 # Test axes
-anova(cca2, by = "axis", permutations = 999)
+
 # Test terms (environmental variables)
-anova(cca2, by = "term", permutations = 999)
 
 
 
 
-vegan::ordiplot(cca2,display="sites",cex=1,type="t",xlab="CCA1 (23%)",ylab="CCA2 (18%)")
 # show the species
-vegan::orditorp(cca2,dis="sp", priority=SpecTotCov,
-                col="red",pcol="red",pch="+",cex=1.1)
+
+
 ### draw the environmental factor arrows
 # extract biplot scores of the constrained variables
-bp <- scores(cca2, display = "bp", scaling = 2)
+
+
 # scale arrows to fit the plotting region (same trick envfit uses)
-mul <- vegan::ordiArrowMul(bp)
+
+
+
 # draw arrows + labels
-arrows(0, 0, bp[,1] * mul, bp[,2] * mul, length = 0.08, col = "blue")
-text(bp[,1] * mul, bp[,2] * mul, labels = rownames(bp), col = "blue", pos = 4, xpd = NA)
+
 
 # add  environmental factor contours to the cca ordination plot
-vegan::ordisurf(cca2,envdat$TransProb,add=T,col="green")
-vegan::ordisurf(cca2,envdat$Clay_cm,add=T,col="brown")
 
 
 # You have measured the right things that matter for the vegetation composition!
 
 ##### --------------------cluster analysis (classification) of  communities
 # first calculate a dissimilarity matrix, using Bray-Curtis dissimilarity
-d<-vegan::vegdist(vegdat,method="bray")
-d # show the dissimilarity matrix (1= completely different, 0= exactly the same)
+
+
+# show the dissimilarity matrix (1= completely different, 0= exactly the same)
 
 # now cluster the sites based on similarity in species composition 
 # using average linkage as the sorting algorithm
-cavg<-hclust(d,method="average")
-plot(cavg)
+
+
 
 # back to  clustering based on species composition - show the dendrogram and cut it in 5 communities
-rect.hclust(cavg,5)
-clust<-cutree(cavg,5)
-clust<-factor(clust)
-clust
+
+
 
 # do indicator species analysis - which species characterize each cluster? 
 
-library(indicspecies)
-set.seed(123)  # reproducibility
-indval <- multipatt(vegdat, clust, func = "IndVal.g", duleg = F, control = how(nperm = 999))
-summary(indval, indvalcomp = TRUE)
 
 
 
 ##### add the clustering of plots to your cca ordination
-vegan::ordiplot(dca,display="sites",cex=1,type="t",xlab="CCA1 (0.87)",ylab="CCA2 (0.69)")
-vegan::orditorp(dca,dis="sp", priority=SpecTotCov,
-                col="red",pcol="red",pch="+",cex=1.1)
-vegan::ordihull(dca,clust,lty = 2,col="green3",lwd=2)
+
+
 
 #add the vegetation type to the environmental data
-envdat2<-envdat %>%
-  dplyr::mutate(vegtype=factor(clust))
-envdat2
-envdat2$vegtype
+
+
 
 # name the different communities that you identified
-levels(envdat2$vegtype)<-c("Dune","High saltmarsh", "Mid saltmarsh", "Low saltmarsh","Pioneer zone")
+
+
 
 # show boxplot of elevation differences between vegetation types
-p1<-envdat2 %>% ggplot(aes(x=vegtype,y=Elevation_m)) +
-  geom_boxplot(fill="brown") +
-  xlab(NULL) +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())
-p1
+
 
 # show boxplot of flooding probability differences between vegetation types
-p2<-envdat2 %>% ggplot(aes(x=vegtype,y=TransProb)) +
-  geom_boxplot(fill="brown") +
-  xlab(NULL) +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())
-p2
+
 
 # show boxplot of clay thickness differences between vegetation types
-p3<-envdat2 %>% ggplot(aes(x=vegtype,y=Clay_cm)) +
-  geom_boxplot(fill="brown") +
-  xlab(NULL) +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())
-p3
 
 # show boxplot of distance to gully  between vegetation types
-p4<-envdat2 %>% ggplot(aes(x=vegtype,y=Dist2Gully_m)) +
-  geom_boxplot(fill="brown") +
-  xlab(NULL) +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())
-p4
 
-p5<-envdat2 %>% ggplot(aes(x=vegtype,y=Redox5)) +
-  geom_boxplot(fill="brown") 
-p5
 
-library(patchwork)
-p1/p2/p3/p4/p5
-
+# put everything together in a panel plot
 
