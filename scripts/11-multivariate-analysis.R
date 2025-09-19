@@ -306,7 +306,7 @@ p1
 
 # show boxplot of flooding probability differences between vegetation types
 p2<-envdat2 %>% ggplot(aes(x=vegtype,y=TransProb)) +
-  geom_boxplot(fill="brown") +
+  geom_boxplot(fill="blue") +
   xlab(NULL) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
@@ -314,7 +314,7 @@ p2
 
 # show boxplot of clay thickness differences between vegetation types
 p3<-envdat2 %>% ggplot(aes(x=vegtype,y=Clay_cm)) +
-  geom_boxplot(fill="brown") +
+  geom_boxplot(fill="green") +
   xlab(NULL) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
@@ -322,23 +322,23 @@ p3
 
 # show boxplot of distance to gully  between vegetation types
 p4<-envdat2 %>% ggplot(aes(x=vegtype,y=Dist2Gully_m)) +
-  geom_boxplot(fill="brown") +
+  geom_boxplot(fill="orange") +
   xlab(NULL) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 p4
 
 p5<-envdat2 %>% ggplot(aes(x=vegtype,y=Redox5)) +
-  geom_boxplot(fill="brown") +
+  geom_boxplot(fill="purple") +
   xlab(NULL) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank())
 p5
 
 p6<-envdat2 %>% ggplot(aes(x=vegtype,y=Redox10)) +
-  geom_boxplot(fill="brown") 
+  geom_boxplot(fill="grey") 
 p6
 
 
 library(patchwork)
-p1/p2/p3/p4/p5
+p1/p2/p3/p4/p5/p6
