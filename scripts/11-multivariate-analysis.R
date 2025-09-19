@@ -102,6 +102,7 @@ print(EnvDat)
 # the species data (community composition) need to be in wide format, so we produced this
 vegdat<-VegetationDB$FactVegCov2025
 envdat<-EnvDat
+envdat
 
 ##### explore the correlations among the environmental factors in a panel pairs plot
 # using the pearson correlation coefficient
@@ -194,16 +195,26 @@ vegan::ordisurf(nmds_veg,envdat$TransProb,add=T,col="red")
 # did you miss important environmental factors?
 # show the results of the detrended correspondence analysis
 
-
+dca
 # the eigenvalues represent the variation explained by each axis
+# now do an cca
+names(envdat)
+vegdat
+cca<-vegan::cca(vegdat~Elevation_m+
+                TransProb+Redox5+Clay_cm,
+                data=envdat)
+summary(cca)
 
 # Test the whole model
+anova(cca,permutations=9999)
 
 
 # Test axes
+anova(cca,by="axis", permutations=999)
 
 
 # Test terms (environmental variables)
+anova(cca,by="term", permutations=999)
 
 
 # kick out variables that are not significant - simplify the model
@@ -239,46 +250,95 @@ vegan::ordisurf(nmds_veg,envdat$TransProb,add=T,col="red")
 
 ##### --------------------cluster analysis (classification) of  communities
 # first calculate a dissimilarity matrix, using Bray-Curtis dissimilarity
-
+d<-vegan::vegdist(vegdat,method="bray")
+d
 
 # show the dissimilarity matrix (1= completely different, 0= exactly the same)
 
 # now cluster the sites based on similarity in species composition 
 # using average linkage as the sorting algorithm
+cavg<-hclust(d,method="average")
+plot(cavg)
 
 
-
-# back to  clustering based on species composition - show the dendrogram and cut it in 5 communities
-
-
+# show the dendrogram and cut it in 5 communities
+rect.hclust(cavg,5)
+clust<-cutree(cavg,5)
+clust<-factor(clust)
+clust
 
 # do indicator species analysis - which species characterize each cluster? 
+library(indicspecies)
+set.seed(123) # for reproducibility
+indval <- multipatt(vegdat, clust, 
+                    func = "IndVal.g", duleg = F, 
+                    control = how(nperm = 999))
+summary(indval,indivalcomp=TRUE)
 
 
 
-
-##### add the clustering of plots to your cca ordination
+##### add the clustering of plots to your dca ordination
+vegan::ordiplot(dca,display="sites",cex=0.7,type="text",xlim=c(-5,5))
+vegan::orditorp(dca,dis="sp", priority=SpecTotCov,
+                col="red",pcol="red",pch="+",cex=0.8,xlim=c(-5,5))
+vegan::ordihull(dca,clust,lty=1,col="blue",lwd=2)
 
 
 
 #add the vegetation type to the environmental data
-
+envdat2<-envdat |>
+  dplyr::mutate(vegtype=clust)
+envdat2 |> as_tibble()
 
 
 # name the different communities that you identified
-
+levels(envdat2$vegtype)<-c("Dune","High saltmarsh", 
+                           "Mid Saltmarsh", "Low saltmarsh", "Pioneer")
 
 
 # show boxplot of elevation differences between vegetation types
-
+p1<-envdat2 %>% ggplot(aes(x=vegtype,y=Elevation_m)) +
+  geom_boxplot(fill="brown") +
+  xlab(NULL) +
+  theme(axis.text.x=element_blank(),
+        axis.ticks = element_blank())
+p1
 
 # show boxplot of flooding probability differences between vegetation types
-
+p2<-envdat2 %>% ggplot(aes(x=vegtype,y=TransProb)) +
+  geom_boxplot(fill="brown") +
+  xlab(NULL) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+p2
 
 # show boxplot of clay thickness differences between vegetation types
+p3<-envdat2 %>% ggplot(aes(x=vegtype,y=Clay_cm)) +
+  geom_boxplot(fill="brown") +
+  xlab(NULL) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+p3
 
 # show boxplot of distance to gully  between vegetation types
+p4<-envdat2 %>% ggplot(aes(x=vegtype,y=Dist2Gully_m)) +
+  geom_boxplot(fill="brown") +
+  xlab(NULL) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+p4
+
+p5<-envdat2 %>% ggplot(aes(x=vegtype,y=Redox5)) +
+  geom_boxplot(fill="brown") +
+  xlab(NULL) +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+p5
+
+p6<-envdat2 %>% ggplot(aes(x=vegtype,y=Redox10)) +
+  geom_boxplot(fill="brown") 
+p6
 
 
-# put everything together in a panel plot
-
+library(patchwork)
+p1/p2/p3/p4/p5
