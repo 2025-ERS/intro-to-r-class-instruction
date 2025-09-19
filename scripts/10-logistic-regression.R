@@ -133,21 +133,50 @@ add_predictions<- function(species_name,model,db=MicrotransectDB$FactVegClay2025
 }
 
 #####--------------------------------Fit logistic regression models 
+DomSpec
 # fit the models for Glaux.maritima
 summary(fit1("Glaux.maritima"))
 summary(fit2("Glaux.maritima"))
 # choose which model to use, and add its predictions to the dataframe
 MicrotransectDB$FactVegClay2025 <-
    add_predictions(species_name="Glaux.maritima",model=fit1("Glaux.maritima"))
-view(MicrotransectDB$FactVegClay2025)
-# Model Puccinellia.maritima and add predicted values to the dataset
+names(MicrotransectDB$FactVegClay2025)
+
+# Model next species and add predicted values to the dataset
+summary(fit1("Limonium.vulgare"))
+summary(fit2("Limonium.vulgare"))
+# choose which model to use, and add its predictions to the dataframe
+MicrotransectDB$FactVegClay2025 <-
+   add_predictions(species_name="Limonium.vulgare",model=fit1("Limonium.vulgare"))
+
+# Model next species and add predicted values to the dataset
+summary(fit1("Plantago.maritima"))
+summary(fit2("Plantago.maritima"))
+# choose which model to use, and add its predictions to the dataframe
+MicrotransectDB$FactVegClay2025 <-
+  add_predictions(species_name="Plantago.maritima",model=fit2("Plantago.maritima"))
+
+# Model next one and add predicted values to the dataset
+summary(fit1("Puccinellia.maritima"))
+summary(fit2("Puccinellia.maritima"))
+# choose which model to use, and add its predictions to the dataframe
+MicrotransectDB$FactVegClay2025 <-
+  add_predictions(species_name="Puccinellia.maritima",model=fit1("Puccinellia.maritima"))
+
+# Model next one and add predicted values to the dataset
+summary(fit1("Salicornia.europaea"))
+summary(fit2("Salicornia.europaea"))
+# choose which model to use, and add its predictions to the dataframe
+MicrotransectDB$FactVegClay2025 <-
+  add_predictions(species_name="Salicornia.europaea",model=fit2("Salicornia.europaea"))
 
 
-# Model Limonium vulgare and add predicted values to the dataset
-
-# Model Salicornia.europaea and add predicted values to the dataset
-
-# Model Salicornia.procumbens and add predicted values to the dataset
+# Model next one and add predicted values to the dataset
+summary(fit1("Salicornia.procumbens"))
+summary(fit2("Salicornia.procumbens"))
+# choose which model to use, and add its predictions to the dataframe
+MicrotransectDB$FactVegClay2025 <-
+  add_predictions(species_name="Salicornia.procumbens",model=fit1("Salicornia.procumbens"))
 
 
 ##### -----------------------Plot the results
@@ -156,7 +185,7 @@ DomSpec
 p4<-MicrotransectDB$FactVegClay2025 |> dplyr::filter(Species %in% DomSpec) |>
   ggplot(aes(x = Elevation_m, y = Present)) +
   geom_point(size = 1) +
-  geom_smooth(method="lm")+
+  geom_line(aes(y=Predicted)) +
   labs(
     title = "Microtransect",
     x = "Elevation (m)",
@@ -168,7 +197,16 @@ p4
 
 
 # Plot the predicted values (without observed values) of the different species in 1 plot
-
+p5<-MicrotransectDB$FactVegClay2025 |> dplyr::filter(Species %in% DomSpec) |>
+  ggplot(aes(x = Elevation_m, y = Present, color=Species)) +
+  geom_line(aes(y=Predicted),linewidth=2) +
+  labs(
+    title = "Microtransect",
+    x = "Elevation (m)",
+    y = "Presence"
+  ) +
+  ylim(0,1) 
+p5
 
 # Combine the last two plots in a vertical panel plot
 
