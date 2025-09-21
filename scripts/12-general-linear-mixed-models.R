@@ -9,7 +9,7 @@
 source("scripts/00-setup.R")
 gsheets_auth()
 library(glmmTMB)
-
+library(car)
 
 #--------------------------02 Simulate a dataset -----
 # Define the effect size for the treatment as a continuous factor
@@ -43,11 +43,11 @@ for (block in 1:3) {
 }
 
 # plot the data
-p0<-ggplot(data, aes(x = Treatment, y = Value)) +
-  geom_jitter(width=0.05,aes(color=Block)) +
-  labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)")
+p0<-ggplot(data, aes(x = Treatment, y = Value, color=Block)) +
+  geom_jitter(width=0.05) +
+  labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)",
+       title="fixed slopes")
 p0
-
 
 # fit and show a linear model with treatment and block, but no interaction
 # this we call a "random intercepts, fixed slopes model": 
@@ -63,10 +63,12 @@ p1<-ggplot(data, aes(x = Treatment, y = Value)) +
               method="lm", formula="y~x", fill=NA) +
   labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)",
        title="fixed slopes")
-
+p1
 # fit and show a linear model with treatment, block, and their interaction
 # this we call a "random slopes model": 
 # each level of the random factor (Block) has its own intercept and its own slope
+# while estimates of slopes and intercepts are not expected to be correlated
+
 
 newdat$Pred_m2 <- predict(m2, newdata = newdat)
 p2<-ggplot(data, aes(x = Treatment, y = Value)) +
@@ -75,8 +77,55 @@ p2<-ggplot(data, aes(x = Treatment, y = Value)) +
               method="lm", formula="y~x", fill=NA) +
   labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)",
        title="random slopes")
+p2
+AIC(m2,m1)
 
-# show both plots
-p1/p2
+# also include estimates for the covariance between intercepts and slopes
+# -> groups with higher intercept also have higher slope
 
+newdat$Pred_m3 <- predict(m3, newdata = newdat)
+p3<-ggplot(data, aes(x = Treatment, y = Value)) +
+  geom_jitter(width=0.1,aes(color=Block)) +
+  geom_smooth(data=newdat,aes(x=Treatment, y=Pred_m3, color=Block), 
+              method="lm", formula="y~x", fill=NA) +
+  labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)",
+       title="random slopes")
 # test which model is better (when AIC value is 2 units lower)
+AIC(m3,m1)
+
+
+p1/p3
+
+
+#--------------------Nested variables -------------------------------
+data(Salamanders, package = "glmmTMB")
+# for dataset / variables description see 
+# browseURL("https://rdrr.io/cran/glmmTMB/man/Salamanders.html")
+# for more details see the whole  paper  
+# browseURL("https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/1365-2664.12585") 
+unique(Salamanders$spp)
+dat<-Salamanders |> 
+  dplyr::filter(spp=="DM") |> # adult Desmognathus monticola
+  mutate(sample=factor(sample)) |> 
+  as_tibble() 
+dat
+# explore design
+table(dat$site,dat$mined)
+table(dat$site,dat$sample)
+# explore results
+ggplot(data=dat, aes(x=mined,y=count, color=sample)) +
+  geom_boxplot()
+ggplot(data=dat, aes(x=site,y=count)) +
+  geom_boxplot(aes(fill=site))
+ggplot(data=dat, aes(x=cover,y=count, color=site)) +
+  geom_point(aes(shape=mined)) +
+  geom_smooth(method="lm")
+
+# test for effect of cover
+
+# add the effect of mining
+
+
+# account that samples were taking at different sites and sampling dates
+# different sample were taken on the same sites, so repeated measurements
+
