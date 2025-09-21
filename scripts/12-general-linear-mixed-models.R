@@ -10,6 +10,7 @@ source("scripts/00-setup.R")
 gsheets_auth()
 library(glmmTMB)
 
+
 #--------------------------02 Simulate a dataset -----
 # Define the effect size for the treatment as a continuous factor
 treatment_effect1 <- c(5, 10, 15, 20)
@@ -44,8 +45,7 @@ for (block in 1:3) {
 # plot the data
 p0<-ggplot(data, aes(x = Treatment, y = Value)) +
   geom_jitter(width=0.05,aes(color=Block)) +
-  labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)",
-       title="fixed slopes")
+  labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)")
 p0
 
 
