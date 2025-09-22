@@ -48,11 +48,27 @@ p0<-ggplot(data, aes(x = Treatment, y = Value, color=Block)) +
   labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)",
        title="fixed slopes")
 p0
+#without block
+p0a<-ggplot(data, aes(x = Treatment, y = Value)) +
+  geom_jitter(width=0.05) +
+  labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)",
+       title="fixed slopes")
+p0a
 
 # fit and show a linear model with treatment and block, but no interaction
 # this we call a "random intercepts, fixed slopes model": 
 # each block has its own intercept but the same slope
+#  fit a general linear mixed model 
+# mixed because block is a random factor, while nitrogen addition
+# is a fixe factor
+data
+m1 <- glmmTMB::glmmTMB(Value~Treatment + (1 | Block),
+                       family=gaussian(link="identity"),
+                       data=data)
+summary(m1)
+car::Anova(m1)
 
+  
 # fit predictions and show the observations and predictions
 newdat <- expand.grid(Treatment = seq(1:4),
                       Block = c("Block1","Block2","Block3"))
@@ -68,7 +84,13 @@ p1
 # this we call a "random slopes model": 
 # each level of the random factor (Block) has its own intercept and its own slope
 # while estimates of slopes and intercepts are not expected to be correlated
-
+m2 <- glmmTMB::glmmTMB(Value~Treatment + (1 | Block) +  
+                         (0 + Treatment | Block),
+                       family=gaussian(link="identity"),
+                       data=data)
+summary(m2)
+car::Anova(m2)
+AIC(m2,m1) # better if more than 2 units different (lower is better)
 
 newdat$Pred_m2 <- predict(m2, newdata = newdat)
 p2<-ggplot(data, aes(x = Treatment, y = Value)) +
@@ -82,19 +104,13 @@ AIC(m2,m1)
 
 # also include estimates for the covariance between intercepts and slopes
 # -> groups with higher intercept also have higher slope
+m3 <- glmmTMB::glmmTMB(Value~Treatment + (1 | Block) +  
+                         (1 + Treatment | Block),
+                       family=gaussian(link="identity"),
+                       data=data)
+# the data do not allow the fitting of this model
 
-newdat$Pred_m3 <- predict(m3, newdata = newdat)
-p3<-ggplot(data, aes(x = Treatment, y = Value)) +
-  geom_jitter(width=0.1,aes(color=Block)) +
-  geom_smooth(data=newdat,aes(x=Treatment, y=Pred_m3, color=Block), 
-              method="lm", formula="y~x", fill=NA) +
-  labs(x="nitrogen addition (kg/ha)", y="biomass (g/m2)",
-       title="random slopes")
-# test which model is better (when AIC value is 2 units lower)
-AIC(m3,m1)
-
-
-p1/p3
+p1/p2
 
 
 #--------------------Nested variables -------------------------------
@@ -123,9 +139,40 @@ ggplot(data=dat, aes(x=cover,y=count, color=site)) +
 
 # test for effect of cover
 
+m4<-glmmTMB(count~cover,
+            family=poisson(link="log"),
+            data=dat
+            )
+summary(m4)
+
 # add the effect of mining
+m5<-glmmTMB(count~cover + mined,
+            family=poisson(link="log"),
+            data=dat
+)
+summary(m5)
+car::Anova(m5)
 
 
 # account that samples were taking at different sites and sampling dates
 # different sample were taken on the same sites, so repeated measurements
+# fist add only effect of site
+m6<-glmmTMB(count~cover + mined + (1 | site),
+            family=poisson(link="log"),
+            data=dat
+)
+summary(m6)
+car::Anova(m6)
+AIC(m6,m5)
+# better model 
+# also account for samples (replicate samples on same site)
+# do not abbreviate your model
+# (1 | site) + (1 | site:sample) = (1 | site/sample)
+m7<-glmmTMB(count~cover + mined + (1 | site) + (1 | site:sample),
+            family=poisson(link="log"),
+            data=dat
+)
+summary(m7)
+car::Anova(m7)
+AIC(m7,m6)
 
