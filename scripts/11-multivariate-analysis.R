@@ -234,7 +234,6 @@ var_exp <- round(pcoa_res$values$Relative_eig[1:2] * 100, 1)
 sp <- vegan::wascores(scores[, c("PCoA1","PCoA2")], vegdat)
 sp <- as.data.frame(sp)
 sp$Species <- rownames(sp)
-
 ggplot() +
   geom_point(data = scores, aes(PCoA1, PCoA2), size = 2) +
   geom_text_repel(data = scores, aes(PCoA1, PCoA2, label = Plot_ID), size = 3) +
@@ -243,6 +242,39 @@ ggplot() +
   xlab(paste0("PCoA1 (", var_exp[1], "%)")) +
   ylab(paste0("PCoA2 (", var_exp[2], "%)")) +
   theme_classic()
+
+# repeat with a different dissimilarity measure, e.g. Hellinger
+# 1. Hellinger transform
+vegdat_hel <- decostand(vegdat, method = "hellinger")
+# 2. PCA (=unconstrained RDA), when data are hellinger transformed this is equivalent to a PCoA with euclidean distance on the original data 
+rda_res <- vegan::rda(vegdat_hel)
+# 3. Site scores
+scores_hel <- as.data.frame(scores(rda_res, display = "sites")[,1:2])
+names(scores_hel) <- c("PCA1","PCA2")
+scores_hel$Plot_ID <- rownames(scores_hel)
+scores_hel
+# 4. Species scores
+sp_hel <- as.data.frame(scores(rda_res, display = "species")[,1:2])
+names(sp_hel) <- c("PCA1","PCA2")
+sp_hel$Species <- rownames(sp_hel)
+sp_hel
+# 5. % variance explained
+var_exp_hel <- round(summary(rda_res)$cont$importance[2,1:2] * 100, 1)
+# 6. Plot
+ggplot() +
+  geom_point(data = scores_hel, aes(PCA1, PCA2), size = 2) +
+  geom_text_repel(data = scores_hel,
+                  aes(PCA1, PCA2, label = Plot_ID),
+                  size = 3) +
+  geom_point(data = sp_hel, aes(PCA1, PCA2), shape = 3) +
+  geom_text_repel(data = sp_hel,
+                  aes(PCA1, PCA2, label = Species),
+                  size = 3) +
+  xlab(paste0("Axis 1 (", var_exp_hel[1], "%)")) +
+  ylab(paste0("Axis 2 (", var_exp_hel[2], "%)")) +
+  theme_classic()
+
+
 
 ##### --------------------cluster analysis (classification) of  communities
 # first calculate a dissimilarity matrix, using Bray-Curtis dissimilarity
