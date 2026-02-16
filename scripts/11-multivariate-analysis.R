@@ -305,7 +305,7 @@ summary(indval,indivalcomp=TRUE)
 
 
 
-##### add the clustering of plots to your dca ordination
+##### add the clustering of plots to your PCoA ordination
 vegan::ordiplot(dca,display="sites",cex=0.7,type="text",xlim=c(-5,5))
 vegan::orditorp(dca,dis="sp", priority=SpecTotCov,
                 col="red",pcol="red",pch="+",cex=0.8,xlim=c(-5,5))
