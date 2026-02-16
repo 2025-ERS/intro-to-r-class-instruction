@@ -8,8 +8,10 @@
 #--------------------------01 Set up the environment ----
 source("scripts/00-setup.R")
 gsheets_auth()
-library(vegan)
+library(vegan) # for DCA, RDA
 library(psych)
+library(ape) # for PCoA
+library(ggrepel) # for avoiding overlapping labels in ggplot
 
 #--------------------------02 Read and combine the datasets -----
 
@@ -217,36 +219,30 @@ anova(cca,by="axis", permutations=999)
 anova(cca,by="term", permutations=999)
 
 
-# kick out variables that are not significant - simplify the model
+######### Do a principal coordinate analysis PCoA
+dist_mat <- vegdist(vegdat, method = "bray")
+pcoa_res <- ape::pcoa(dist_mat)
+# extract the coordinates
+scores <- as.data.frame(pcoa_res$vectors[,1:2])
+names(scores) <- c("PCoA1","PCoA2")
+scores$Plot_ID <- rownames(scores)   # rownames represent plot numbers in this case
+scores
+# calculate variance explained
+var_exp <- round(pcoa_res$values$Relative_eig[1:2] * 100, 1)
+# plot the ordination
+# species "scores" as weighted averages of site scores (not that this is an approximation, not as in DCA or CCA)
+sp <- vegan::wascores(scores[, c("PCoA1","PCoA2")], vegdat)
+sp <- as.data.frame(sp)
+sp$Species <- rownames(sp)
 
-
-# Test the whole model
-
-# Test axes
-
-# Test terms (environmental variables)
-
-
-
-
-# show the species
-
-
-### draw the environmental factor arrows
-# extract biplot scores of the constrained variables
-
-
-# scale arrows to fit the plotting region (same trick envfit uses)
-
-
-
-# draw arrows + labels
-
-
-# add  environmental factor contours to the cca ordination plot
-
-
-# You have measured the right things that matter for the vegetation composition!
+ggplot() +
+  geom_point(data = scores, aes(PCoA1, PCoA2), size = 2) +
+  geom_text_repel(data = scores, aes(PCoA1, PCoA2, label = Plot_ID), size = 3) +
+  geom_point(data = sp, aes(PCoA1, PCoA2), shape = 3) +
+  ggrepel::geom_text_repel(data = sp, aes(PCoA1, PCoA2, label = Species), size = 3) +
+  xlab(paste0("PCoA1 (", var_exp[1], "%)")) +
+  ylab(paste0("PCoA2 (", var_exp[2], "%)")) +
+  theme_classic()
 
 ##### --------------------cluster analysis (classification) of  communities
 # first calculate a dissimilarity matrix, using Bray-Curtis dissimilarity
