@@ -274,6 +274,9 @@ ggplot() +
   ylab(paste0("Axis 2 (", var_exp_hel[2], "%)")) +
   theme_classic()
 
+###### solar park  data
+solardat<-read_csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vR0lG6_OUW42za4evantsfnerkHtud3Yb4T7IeRELBrKf6f3a04xwMXysX2wdPuZmPOGlyG9pBrcoE0/pub?gid=965225171&single=true&output=csv")
+
 
 
 ##### --------------------cluster analysis (classification) of  communities
